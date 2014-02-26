@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name = "viewport" content = "width = device-width">
+<title>Let's see what your browser can do</title>
+<style type="text/css">
+	.videoTypes{
+		display : none
+	}
+	.location{
+		display : none
+	}
+	#saveBtn{
+		display : none
+	}
+</style>
+<script type="text/javascript">	
+	var db = {};
+	function $(id){
+		return document.getElementById(id);
+	}
+	function detectBrowserCapabilities(){
+		$("userAgent").innerHTML = navigator.userAgent;	
+		var hasWebWorkers = !!window.Worker;
+		$("workersFlag").innerHTML = "" + hasWebWorkers;
+		var hasGeolocation = !!navigator.geolocation;
+		$("geoFlag").innerHTML = "" + hasGeolocation;
+		if (hasGeolocation){
+			document.styleSheets[0].cssRules[1].style.display = "block";
+			navigator.geolocation.getCurrentPosition(function(location) {
+				$("geoLat").innerHTML = location.coords.latitude;
+				$("geoLong").innerHTML = location.coords.longitude;
+				venueSearch(location.coords.latitude, location.coords.longitude);
+			});
+		}
+		var hasDb = !!window.openDatabase;
+		$("dbFlag").innerHTML = "" + hasDb;
+		var videoElement = document.createElement("video");
+		var hasVideo = !!videoElement["canPlayType"];
+		var ogg = false;
+		var h264 = false;
+		if (hasVideo) {
+			ogg = videoElement.canPlayType('video/ogg; codecs="theora, vorbis"') || "no";
+	       	h264 = videoElement.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') || "no";
+		}
+		$("videoFlag").innerHTML = "" + hasVideo;
+		if (hasVideo){
+			var vStyle = document.styleSheets[0].cssRules[0].style;
+			vStyle.display = "block";
+		}
+		$("h264Flag").innerHTML = "" + h264;
+		$("oggFlag").innerHTML = "" + ogg;
+	}
+	var allVenues = [];
+	function venueSearch(geoLat, geoLong){
+		var xhr = new XMLHttpRequest();
+		xhr.onreadystatechange = function(){
+			if (this.readyState == 4 && this.status == 200){
+				var responseObj = eval('(' + this.responseText + ')');
+				var venues = responseObj.groups[0].venues;
+				allVenues = venues;
+				buildVenuesTable(venues);
+				if (!!window.Worker){
+					var worker = new Worker("details.js");
+					worker.onmessage = function(message){
+						var tips = message.data;
+						displayTips(tips);
+					};
+					worker.postMessage(allVenues);
+				}
+			}
+		}
+		xhr.open("GET", "api?geoLat=" + geoLat + "&geoLong="+geoLong);
+		xhr.send(null);
+	}
+	
+	function displayTips(tips){
+		// do something interesting
+	}
+	
+	function buildVenuesTable(venues){
+		var rows = venues.map(function (venue) {
+			var row = document.createElement("tr");
+			var nameTd = document.createElement("td");
+			nameTd.appendChild(document.createTextNode(venue.name));
+			row.appendChild(nameTd);
+			var addrTd = document.createElement("td");
+			var addrStr = venue.address + " " + venue.city + "," + venue.state;
+			addrTd.appendChild(document.createTextNode(addrStr));
+			row.appendChild(addrTd);
+			var distTd = document.createElement("td");
+			distTd.appendChild(document.createTextNode("" + venue.distance));
+			row.appendChild(distTd);
+			return row;
+		});
+		var vTable = document.createElement("table");
+		vTable.border = 1;
+		var header = document.createElement("thead");
+		var nameLabel = document.createElement("td");
+		nameLabel.appendChild(document.createTextNode("Venue Name"));
+		header.appendChild(nameLabel);
+		var addrLabel = document.createElement("td");
+		addrLabel.appendChild(document.createTextNode("Address"));
+		header.appendChild(addrLabel);
+		var distLabel = document.createElement("td");
+		distLabel.appendChild(document.createTextNode("Distance (m)"));
+		header.appendChild(distLabel);
+		vTable.appendChild(header);
+		var body = document.createElement("tbody");
+		rows.forEach(function(row) {
+			body.appendChild(row);
+		});
+		vTable.appendChild(body);
+		$("searchResults").appendChild(vTable);
+		if (!!window.openDatabase){
+			$("saveBtn").style.display = "block";
+		}
+	}
+	function saveAll(){
+		if (!window.openDatabase){
+			return;
+		}
+		db = window.openDatabase("venueDb", "1.0", "Venue Database",1000000);
+		db.transaction(function(txn){
+			txn.executeSql("CREATE TABLE venue (id INTEGER NOT NULL PRIMARY KEY, "+
+					"name NVARCHAR(200) NOT NULL, address NVARCHAR(100), cross_street NVARCHAR(100), "+
+					"city NVARCHAR(100), state NVARCHAR(20), geolat TEXT NOT NULL, "+
+					"geolong TEXT NOT NULL);");
+		});
+		allVenues.forEach(saveVenue);
+		countVenues();
+	}
+	function saveVenue(venue){
+		// check if we already have the venue
+		db.transaction(function(txn){
+			txn.executeSql("SELECT name FROM venue WHERE id = ?", [venue.id],
+				function(t, results){
+					if (results.rows.length == 1 && results.rows.item(0)['name']){
+						console.log("Already have venue id=" + venue.id);
+					} else {
+						insertVenue(venue);
+					}
+				})
+		});
+	}
+	function insertVenue(venue){
+		db.transaction(function(txn){
+			txn.executeSql("INSERT INTO venue (id, name, address, cross_street, "+
+					"city, state, geolat, geolong) VALUES (?, ?, ?, ?, "+
+					"?, ?, ?, ?);", [venue.id, venue.name, 
+					 venue.address, venue.crossstreet, venue.city, venue.state,
+					 venue.geolat, venue.geolong], null, errHandler);
+		});		
+	}
+	function countVenues(){
+		db.transaction(function(txn){
+			txn.executeSql("SELECT COUNT(*) FROM venue;",[], function(transaction, results){
+				var numRows = results.rows.length;
+				var row = results.rows.item(0);
+				var cnt = row["COUNT(*)"];
+				alert(cnt + " venues saved locally");
+			}, errHandler);
+		});
+	}
+	function errHandler(txn, error){
+		alert('Oops.  Error was '+error.message+' (Code '+error.code+')');
+	}
+</script>
+</head>
+<body>
+<input type="button" value="Begin detection" onclick="detectBrowserCapabilities()"/>
+<div>Your browser's user-agent: <span id="userAgent"></span></div>
+<div>Web Workers? <span id="workersFlag"></span></div>
+
+<div>Database? <span id="dbFlag"></span></div>
+<div>Video? <span id="videoFlag"></span></div>
+<div class="videoTypes">Can play H.264? <span id="h264Flag"></span></div>
+<div class="videoTypes">Can play OGG? <span id="oggFlag"></span></div>
+<div>Geolocation? <span id="geoFlag"></span></div>
+<div class="location">
+	<div>Latitude: <span id="geoLat"></span></div>
+	<div>Longitude: <span id="geoLong"></span></div>
+	<div id="searchResults"></div>
+	<input id="saveBtn" type="button" value="Save Venues" onclick="saveAll()" />
+</div>
+</body>
+</html>
