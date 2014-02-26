@@ -11,7 +11,7 @@ How to test?
 2. Copy the contents of support in home folder. Open full.py in text editor. Browse to this line "view.open('file:///home/<username>/support/index.html')". Put your username in place of <username> & save it.
 3. Type "cd support" in terminal.
 4. Now type "python full.py"
-5. Voila it will start running!!
+5. Voila it will start running!!. To exit the app press ` (the key above tab and bellow escape)
 
 Why build it?
 I am quite attracted by the concept of Phonegap where it makes sure that the end-developer doesnot need to worry about modifying the native core of the app and concentrate on HTML/JS/CSS app. Also I wanted to try the new Windows 8 frameless fullscreen app concept in linux so I tried some of my luck and got a fullscreen app running HTML5 web app. With a decent UI framework we can make our own UI. Go ahead and try some of your luck and try making an offline app without using a local server.
