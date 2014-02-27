@@ -14,7 +14,8 @@ How to test?
 5. Voila it will start running!!. To exit the app press ` (the key above tab and bellow escape)
 
 Why build it?
-I am quite attracted by the concept of Phonegap where it makes sure that the end-developer doesnot need to worry about modifying the native core of the app and concentrate on HTML/JS/CSS app. Also I wanted to try the new Windows 8 frameless fullscreen app concept in linux so I tried some of my luck and got a fullscreen app running HTML5 web app. With a decent UI framework we can make our own UI. Go ahead and try some of your luck and try making an offline app without using a local server.
+
+I am quite attracted by the concept of Phonegap where it makes sure that the end-developer doesn't need to worry about modifying the native core of the app and concentrate on HTML/JS/CSS app. Also I wanted to try the new Windows 8 frameless fullscreen app concept in linux so I tried some of my luck and got a fullscreen app running HTML5 web app. With a decent UI framework we can make our own UI. Go ahead and try some of your luck and try making an offline app without using a local server.
 
 In case of queries mail me at 
 
